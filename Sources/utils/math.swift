@@ -1,5 +1,6 @@
 import Foundation
 
+//multiply Vec3 by component, operator * is dot product
 infix operator .*
 
 
@@ -19,12 +20,12 @@ struct Vec3<Component> where Component: FloatingPoint{
    
 }
 
-struct ray<T> where T: FloatingPoint{
+struct Ray<T> where T: FloatingPoint{
     let origin    : Vec3<T>
     var direction : Vec3<T>
 }
 
-extension ray{
+extension Ray{
     init(){
         self.origin    = Vec3()
         self.direction = Vec3()

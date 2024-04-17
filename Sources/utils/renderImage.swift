@@ -1,55 +1,71 @@
 import Foundation
 
-func writeToPPM(width : Int, height : Int, filePath : String) -> Bool{
+struct Camera{
+    var focalLenght: Float = 1
+    var viewporthWidth: Float = 16
+    var viewportHeight: Float = 9
+    var center: Vec3<Float> = Vec3<Float>(x: 0, y: 0, z: 0)
+
+    func getViewportU() -> Vec3<Float>{
+        return Vec3<Float>(x: viewporthWidth, y: 0, z: 0)
+    }
+
+    func getViewportV() -> Vec3<Float>{
+        return Vec3<Float>(x: 0, y: -viewportHeight, z: 0)
+    }
+
+    func getPixelDeltaU(width: Int) -> Vec3<Float>{
+        return getViewportU() / Float(width)
+    }
+
+    func getPixelDeltaV(height: Int) -> Vec3<Float>{
+        return getViewportV() / Float(height)
+    }
+
+    func getViewportUpperLeft() -> Vec3<Float>{
+        return center - Vec3<Float>(x: 0, y: 0, z: focalLenght) - (getViewportU() / 2) - (getViewportV() / 2)
+    }
+
+    func getPixel00Loc(width: Int, height: Int) -> Vec3<Float>{
+        return getViewportUpperLeft() + 0.5 * (getPixelDeltaU(width: width) + getPixelDeltaV(height: height))
+    }
+}
+
+func writeToPPMBinaryMode(width : Int, height : Int, img: UnsafeMutableBufferPointer<Pixel>, filePath : String){
     let header : String = "P6\n\(width) \(height)\n255\n"
     
-   
-    let buffer: UnsafeMutablePointer<Pixel>       = UnsafeMutablePointer<Pixel>.allocate(capacity: width * height)
-    let img:    UnsafeMutableBufferPointer<Pixel> = UnsafeMutableBufferPointer<Pixel>(start: buffer, count: width * height)
-    let red: Pixel = Pixel(r: 255, g: 0, b: 0)
-    let yelow: Pixel = Pixel(r: 255, g: 255, b: 0)
-    
-    for j in 0..<height{
-        for i in 0..<width{
-            // if(i > 100 && i < 250 && j > 25 && j < 250){
-            //     img[j * width + i] = Pixel(r: 255, g: 0, b: 0)
-            // } else{
-            //     img[j * width + i] = Pixel(r: 255, g: 255, b: 0)
-            // }
-            let colour : Pixel = Pixel.lerp(a: red, b: yelow, t: clamp(start: 0, end: 1, value: Float(j) / Float(height)))
-            img[j * width + i] = colour
-        }
-    }
 
     let fileManager: FileManager = FileManager()
     
-    fileManager.createFile(atPath: "./ffh.ppm", contents: nil)
+    fileManager.createFile(atPath: filePath, contents: nil)
 
-    let file: FileHandle = try! FileHandle(forWritingTo: URL(fileURLWithPath: "ffh.ppm"))
+    let file: FileHandle = try! FileHandle(forWritingTo: URL(fileURLWithPath: filePath))
     defer{
         try! file.close()
     }
 
     try! file.write(contentsOf: header.data(using: .ascii)!)
     file.write(Data(buffer: img))
-
-    return true
 }
 
-func writeToFile(width : Int, height : Int, colorPixel : Vec3<Float>) -> UInt8{
+func writeToPPMASCIIMode(width: Int, height: Int, imgData: String, filePath: String) {
     var header: String = "P3\n\(width) \(height)\n255\n"
 
-    let filePath : URL = URL(fileURLWithPath: "./output.ppm")
+    let filePath : URL = URL(fileURLWithPath: filePath)
 
+    
+    header.append(contentsOf: imgData)
+
+    try! header.write(to: filePath, atomically: true, encoding: .ascii)
+}
+
+func generateExamplePixelData(width: Int, height: Int, filePath: String){
+    
     var str = ""
     str.reserveCapacity(width * height * 12)
 
     let red:   Vec3<Float> = Vec3(x: 255, y: 0, z: 0)
     let yelow: Vec3<Float> = Vec3(x: 255, y: 255, z: 0)
-
-    print(Vec3.lerp(a: red, b: yelow, t: 1))
-
-    
 
     for j in 0..<height{
         for i in 0..<width{
@@ -76,15 +92,32 @@ func writeToFile(width : Int, height : Int, colorPixel : Vec3<Float>) -> UInt8{
         }
     }
 
-    print("Size file image to save: \(MemoryLayout<UInt8>.size * str.count) bytes")
-    print(width * height * 12)
+    writeToPPMASCIIMode(width: width, height: height, imgData: str, filePath: filePath)
 
-    header.append(contentsOf: str)
-
-    try! header.write(to: filePath, atomically: true, encoding: .ascii)
-    
-
-
-    
-    return 0
 }
+
+func generateExampleBinaryData(width: Int, height: Int, filePath: String){
+    let buffer: UnsafeMutablePointer<Pixel>       = UnsafeMutablePointer<Pixel>.allocate(capacity: width * height)
+    let img:    UnsafeMutableBufferPointer<Pixel> = UnsafeMutableBufferPointer<Pixel>(start: buffer, count: width * height)
+    defer{
+        buffer.deallocate()
+    }
+
+    let red: Pixel = Pixel(r: 255, g: 0, b: 0)
+    let yelow: Pixel = Pixel(r: 255, g: 255, b: 0)
+    
+    for j in 0..<height{
+        for i in 0..<width{
+            // if(i > 100 && i < 250 && j > 25 && j < 250){
+            //     img[j * width + i] = Pixel(r: 255, g: 0, b: 0)
+            // } else{
+            //     img[j * width + i] = Pixel(r: 255, g: 255, b: 0)
+            // }
+            let colour : Pixel = Pixel.lerp(a: red, b: yelow, t: clamp(start: 0, end: 1, value: Float(j) / Float(height)))
+            img[j * width + i] = colour
+        }
+    }
+
+    writeToPPMBinaryMode(width: width, height: height, img: img, filePath: filePath)
+}
+
