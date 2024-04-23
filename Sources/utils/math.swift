@@ -3,6 +3,10 @@ import Foundation
 //multiply Vec3 by component, operator * is dot product
 infix operator .*
 
+@inlinable
+func degreesToRadians(degrees: Float) -> Float{
+    return degrees * Float.pi / 180
+}
 
 @inlinable
 func clamp<T: Comparable>(start : T, end: T, value: T) -> T{
@@ -25,7 +29,7 @@ struct Ray<T> where T: FloatingPoint{
     var direction : Vec3<T>
 }
 
-extension Ray{
+extension Ray{  
     init(){
         self.origin    = Vec3()
         self.direction = Vec3()
