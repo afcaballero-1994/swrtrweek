@@ -13,13 +13,17 @@ struct Camera{
     var pixelDeltaV: Vec3<Float>
     var viewportUpperLeft: Vec3<Float>
     var pixel00Loc: Vec3<Float>
+    var samplesPerPixel: Float
+    let pixelSamplesScale: Float
 
-    init(imageWidth: Int, imageHeight: Int, focalLenght: Float = 1.0, viewporthWidth: Float = 16, viewportHeight: Float = 9){
+    init(imageWidth: Int, imageHeight: Int, focalLenght: Float = 1.0, viewporthWidth: Float = 16, viewportHeight: Float = 9, samplesPerPixel: Float = 10){
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
         self.focalLenght = focalLenght
         self.viewporthWidth = viewporthWidth
         self.viewportHeight = viewportHeight
+        self.samplesPerPixel = samplesPerPixel
+        self.pixelSamplesScale = 1 / samplesPerPixel
 
         self.center = Vec3<Float>(x: 0, y: 0, z: 0)
         self.viewportU = Vec3<Float>(x: viewporthWidth, y: 0, z: 0)
@@ -51,16 +55,39 @@ struct Camera{
 
         for j: Int in 0..<imageHeight{
             for i: Int in 0..<imageWidth{
-                let pixelCenter: Vec3<Float> = pixel00Loc + (Float(i) * pixelDeltaU) + (Float(j) * pixelDeltaV)
-                let rayDirection: Vec3<Float> = pixelCenter - center
-                let ray: Ray = Ray(origin: center, direction: rayDirection)
-                let color: Vec3<Float> = rayColor(ray: ray, world: world)
+                var pixelColor: Vec3<Float> = Vec3<Float>()
 
-                imgData.append(contentsOf: "\(UInt8(color.x * 255)) \(UInt8(color.y * 255)) \(UInt8(color.z * 255))\n")
+                for _ in 0..<UInt32(samplesPerPixel){
+                    let ray: Ray = getRay(i: Float(i), j: Float(j))
+                    pixelColor += rayColor(ray: ray, world: world)
+                }
+                let r  = clamp(start: 0, end: 255, value: pixelColor.x * pixelSamplesScale * 255.999)
+                let g  = clamp(start: 0, end: 255, value: pixelColor.y * pixelSamplesScale * 255.999)
+                let b  = clamp(start: 0, end: 255, value: pixelColor.z * pixelSamplesScale * 255.999)
+                //print("\(pixelColor.x) \(pixelColor.y) \(pixelColor.z)")
+
+                imgData.append(contentsOf: "\(UInt8(r))) \(UInt8(g)) \(UInt8(b)) \n")
             }
         }
 
         writeToPPMASCIIMode(width: imageWidth, height: imageHeight, imgData: imgData, filePath: "./rendered.ppm")
+    }
+
+    func getRay(i: Float, j: Float) -> Ray<Float>{
+        let offset: Vec3<Float> = sampleSquare()
+
+        let pixelSample = pixel00Loc
+                          + ((i + offset.x) * pixelDeltaU)
+                          + ((j + offset.y) * pixelDeltaV)
+
+        let rayOrigin = center
+        let rayDirection = pixelSample - rayOrigin
+
+        return Ray<Float>(origin: rayOrigin, direction: rayDirection)
+    }
+
+    func sampleSquare() ->Vec3<Float>{
+        return Vec3<Float>(x: Float.random(in: 0..<1) - 0.5, y: Float.random(in: 0..<1) - 0.5, z: 0)
     }
 
 }

@@ -3,6 +3,30 @@ import Foundation
 //multiply Vec3 by component, operator * is dot product
 infix operator .*
 
+//https://www.bit-101.com/2017/2022/01/letting-go-of-random/
+// function randn_bm() {
+//     var u = 0, v = 0;
+//     while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+//     while(v === 0) v = Math.random();
+//     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+// }
+@inlinable
+func randomNumber() -> Float{
+    var u: Float = 0
+    var v: Float = 0
+    while u == 0{
+        u = Float.random(in: 0...1)
+    }
+    while v == 0{
+        v = Float.random(in: 0...1)
+    }
+    return abs(sqrtf(-2 * log(u)) * cos(2 * Float.pi * v)) / 3;
+}
+@inlinable
+func randomNumber(min: Float, max: Float) -> Float{
+    return min + (max - min) * randomNumber()
+}
+
 @inlinable
 func degreesToRadians(degrees: Float) -> Float{
     return degrees * Float.pi / 180
