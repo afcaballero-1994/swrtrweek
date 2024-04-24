@@ -1,34 +1,68 @@
 import Foundation
 
 struct Camera{
-    var focalLenght: Float = 1
-    var viewporthWidth: Float = 16
-    var viewportHeight: Float = 9
-    var center: Vec3<Float> = Vec3<Float>(x: 0, y: 0, z: 0)
+    var imageWidth: Int
+    var imageHeight: Int
+    var focalLenght: Float
+    var viewporthWidth: Float
+    var viewportHeight: Float
+    var center: Vec3<Float>
+    var viewportU: Vec3<Float>
+    var viewportV: Vec3<Float>
+    var pixelDeltaU: Vec3<Float>
+    var pixelDeltaV: Vec3<Float>
+    var viewportUpperLeft: Vec3<Float>
+    var pixel00Loc: Vec3<Float>
 
-    func getViewportU() -> Vec3<Float>{
-        return Vec3<Float>(x: viewporthWidth, y: 0, z: 0)
+    init(imageWidth: Int, imageHeight: Int, focalLenght: Float = 1.0, viewporthWidth: Float = 16, viewportHeight: Float = 9){
+        self.imageWidth = imageWidth
+        self.imageHeight = imageHeight
+        self.focalLenght = focalLenght
+        self.viewporthWidth = viewporthWidth
+        self.viewportHeight = viewportHeight
+
+        self.center = Vec3<Float>(x: 0, y: 0, z: 0)
+        self.viewportU = Vec3<Float>(x: viewporthWidth, y: 0, z: 0)
+        self.viewportV = Vec3<Float>(x: 0, y: -viewportHeight, z: 0)
+
+        self.pixelDeltaU = viewportU / Float(imageWidth)
+        self.pixelDeltaV = viewportV / Float(imageHeight)
+
+        self.viewportUpperLeft = center - Vec3<Float>(x: 0, y: 0, z: focalLenght) - (viewportU / 2) - (viewportV / 2)
+        self.pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV)
+
     }
 
-    func getViewportV() -> Vec3<Float>{
-        return Vec3<Float>(x: 0, y: -viewportHeight, z: 0)
+    func rayColor(ray: Ray<Float>, world: Hittable) -> Vec3<Float>{
+        var rec: HitRecord = HitRecord(p: Vec3(), normal: Vec3(), t: 0, frontFace: false)
+        if world.isHit(ray: ray, rayT: Interval<Float>(min: 0, max: Float.infinity), rec: &rec){
+            return 0.5 * (rec.normal + Vec3(x: 1, y: 1, z: 1))
+        }
+
+        let unitDirection: Vec3<Float> = ray.direction.normalize()
+        let a: Float = 0.5 * (unitDirection.y + 1.0)
+
+        return ((1 - a) * Vec3<Float>(x: 1, y: 1, z: 1)) + (a * Vec3<Float>(x: 0.5, y: 0.7, z: 1))
     }
 
-    func getPixelDeltaU(width: Int) -> Vec3<Float>{
-        return getViewportU() / Float(width)
+    func render(world: Hittable){
+        var imgData: String = ""
+        imgData.reserveCapacity(imageHeight * imageWidth * 12)
+
+        for j: Int in 0..<imageHeight{
+            for i: Int in 0..<imageWidth{
+                let pixelCenter: Vec3<Float> = pixel00Loc + (Float(i) * pixelDeltaU) + (Float(j) * pixelDeltaV)
+                let rayDirection: Vec3<Float> = pixelCenter - center
+                let ray: Ray = Ray(origin: center, direction: rayDirection)
+                let color: Vec3<Float> = rayColor(ray: ray, world: world)
+
+                imgData.append(contentsOf: "\(UInt8(color.x * 255)) \(UInt8(color.y * 255)) \(UInt8(color.z * 255))\n")
+            }
+        }
+
+        writeToPPMASCIIMode(width: imageWidth, height: imageHeight, imgData: imgData, filePath: "./rendered.ppm")
     }
 
-    func getPixelDeltaV(height: Int) -> Vec3<Float>{
-        return getViewportV() / Float(height)
-    }
-
-    func getViewportUpperLeft() -> Vec3<Float>{
-        return center - Vec3<Float>(x: 0, y: 0, z: focalLenght) - (getViewportU() / 2) - (getViewportV() / 2)
-    }
-
-    func getPixel00Loc(width: Int, height: Int) -> Vec3<Float>{
-        return getViewportUpperLeft() + 0.5 * (getPixelDeltaU(width: width) + getPixelDeltaV(height: height))
-    }
 }
 
 func writeToPPMBinaryMode(width : Int, height : Int, img: UnsafeMutableBufferPointer<Pixel>, filePath : String){

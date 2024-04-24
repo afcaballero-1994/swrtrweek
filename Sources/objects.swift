@@ -17,14 +17,14 @@ struct HitRecord{
 }
 
 protocol Hittable{
-    func isHit(ray: Ray<Float>, rayTMin: Float, rayTMax: Float, rec: inout HitRecord) -> Bool
+    func isHit(ray: Ray<Float>, rayT: Interval<Float>, rec: inout HitRecord) -> Bool
 }
 
 struct Sphere: Hittable{
     let center: Vec3<Float>
     let radius: Float
 
-    func isHit(ray: Ray<Float>, rayTMin: Float, rayTMax: Float, rec: inout HitRecord) -> Bool {
+    func isHit(ray: Ray<Float>, rayT: Interval<Float>, rec: inout HitRecord) -> Bool {
         let oc: Vec3<Float> = center - ray.origin
         let a: Float = ray.direction * ray.direction
         let h: Float = ray.direction * oc
@@ -37,9 +37,9 @@ struct Sphere: Hittable{
 
         let sqrtd: Float = sqrtf(discriminant)
         var root: Float = (h - sqrtd) / a
-        if root <= rayTMin || rayTMax <= root{
+        if !rayT.surround(x: root){
             root = (h + sqrtd) / a
-            if root <= rayTMin || rayTMax <= root{
+            if !rayT.surround(x: root){
                 return false
             }
         }
@@ -65,13 +65,13 @@ struct HittableList: Hittable{
     }
 
 
-    func isHit(ray: Ray<Float>, rayTMin: Float, rayTMax: Float, rec: inout HitRecord) -> Bool {
-        var tmpRecord: HitRecord = HitRecord(p: Vec3(), normal: Vec3(), t: 0, frontFace: false);
-        var hitSomething: Bool = false;
-        var closest: Float = rayTMax
+    func isHit(ray: Ray<Float>, rayT: Interval<Float>, rec: inout HitRecord) -> Bool {
+        var tmpRecord: HitRecord = HitRecord(p: Vec3(), normal: Vec3(), t: 0, frontFace: false)
+        var hitSomething: Bool = false
+        var closest: Float = rayT.max
 
         for object in objects{
-            if object.isHit(ray: ray, rayTMin: rayTMin, rayTMax: closest, rec: &tmpRecord){
+            if object.isHit(ray: ray, rayT: Interval<Float>(min: rayT.min, max: closest), rec: &tmpRecord){
                 hitSomething = true
                 closest = tmpRecord.t
                 rec = tmpRecord 

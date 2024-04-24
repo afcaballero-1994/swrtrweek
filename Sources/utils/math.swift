@@ -142,3 +142,32 @@ extension Vec3{
         return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z 
     }
 }
+
+struct Interval<T> where T: FloatingPoint{
+    let min: T
+    let max: T
+
+    init(){
+        self.min = 0
+        self.max = T.infinity
+    }
+
+    init(min: T, max: T){
+        self.min = min
+        self.max = max
+    }
+
+    func size() -> T{
+        return max - min
+    }
+
+    func contains(x: T) -> Bool{
+        return min <= x && x <= max
+    }
+
+    func surround(x: T) -> Bool{
+        return min < x && x < max
+    }
+
+    
+}
