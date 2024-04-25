@@ -15,8 +15,9 @@ struct Camera{
     var pixel00Loc: Vec3<Float>
     var samplesPerPixel: Float
     let pixelSamplesScale: Float
+    let maxDepth: Float
 
-    init(imageWidth: Int, imageHeight: Int, focalLenght: Float = 1.0, viewporthWidth: Float = 16, viewportHeight: Float = 9, samplesPerPixel: Float = 10){
+    init(imageWidth: Int, imageHeight: Int, focalLenght: Float = 1.0, viewporthWidth: Float = 2 * 16/9, viewportHeight: Float = 2, samplesPerPixel: Float = 10, maxDepth: Float = 10){
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
         self.focalLenght = focalLenght
@@ -24,6 +25,7 @@ struct Camera{
         self.viewportHeight = viewportHeight
         self.samplesPerPixel = samplesPerPixel
         self.pixelSamplesScale = 1 / samplesPerPixel
+        self.maxDepth = maxDepth
 
         self.center = Vec3<Float>(x: 0, y: 0, z: 0)
         self.viewportU = Vec3<Float>(x: viewporthWidth, y: 0, z: 0)
@@ -37,10 +39,18 @@ struct Camera{
 
     }
 
-    func rayColor(ray: Ray<Float>, world: Hittable) -> Vec3<Float>{
-        var rec: HitRecord = HitRecord(p: Vec3(), normal: Vec3(), t: 0, frontFace: false)
-        if world.isHit(ray: ray, rayT: Interval<Float>(min: 0, max: Float.infinity), rec: &rec){
-            return 0.5 * (rec.normal + Vec3(x: 1, y: 1, z: 1))
+    func rayColor(ray: Ray<Float>, depth: Float ,world: Hittable) -> Vec3<Float>{
+        if depth <= 0{
+            return Vec3<Float>()
+        }
+        var rec: HitRecord = HitRecord(p: Vec3(), normal: Vec3(),material: Lambertian(albedo: Vec3()) ,t: 0, frontFace: false)
+        if world.isHit(ray: ray, rayT: Interval<Float>(min: 0.001, max: Float.infinity), rec: &rec){
+            var scattered: Ray<Float> = Ray<Float>()
+            var colAttenuation: Vec3<Float> = Vec3<Float>()
+            let condition: Bool = rec.material.scatter(ray: ray, rec: rec, colAttenuation: &colAttenuation, scattered: &scattered)
+            if condition{
+                return colAttenuation .* rayColor(ray: scattered, depth: depth - 1, world: world)
+            }
         }
 
         let unitDirection: Vec3<Float> = ray.direction.normalize()
@@ -59,18 +69,22 @@ struct Camera{
 
                 for _ in 0..<UInt32(samplesPerPixel){
                     let ray: Ray = getRay(i: Float(i), j: Float(j))
-                    pixelColor += rayColor(ray: ray, world: world)
+                    pixelColor += rayColor(ray: ray, depth: maxDepth ,world: world)
                 }
-                let r  = clamp(start: 0, end: 255, value: pixelColor.x * pixelSamplesScale * 255.999)
-                let g  = clamp(start: 0, end: 255, value: pixelColor.y * pixelSamplesScale * 255.999)
-                let b  = clamp(start: 0, end: 255, value: pixelColor.z * pixelSamplesScale * 255.999)
+                let rr = sqrt(pixelColor.x * pixelSamplesScale)
+                let gg = sqrt(pixelColor.y * pixelSamplesScale)
+                let bb = sqrt(pixelColor.z * pixelSamplesScale)
+
+                let r  = clamp(start: 0, end: 255, value: rr * 256.999)
+                let g  = clamp(start: 0, end: 255, value: gg * 256.999)
+                let b  = clamp(start: 0, end: 255, value: bb * 256.999)
                 //print("\(pixelColor.x) \(pixelColor.y) \(pixelColor.z)")
 
                 imgData.append(contentsOf: "\(UInt8(r))) \(UInt8(g)) \(UInt8(b)) \n")
             }
         }
 
-        writeToPPMASCIIMode(width: imageWidth, height: imageHeight, imgData: imgData, filePath: "./rendered.ppm")
+        writeToPPMASCIIMode(width: imageWidth, height: imageHeight, imgData: imgData, filePath: "./rendered\(UInt8.random(in: 0...255)).ppm")
     }
 
     func getRay(i: Float, j: Float) -> Ray<Float>{

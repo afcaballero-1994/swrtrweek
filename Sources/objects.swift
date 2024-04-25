@@ -3,6 +3,7 @@ import Foundation
 struct HitRecord{
     var p: Vec3<Float>
     var normal: Vec3<Float>
+    var material: Material
     var t: Float
     var frontFace: Bool
 
@@ -23,6 +24,7 @@ protocol Hittable{
 struct Sphere: Hittable{
     let center: Vec3<Float>
     let radius: Float
+    let material: Material
 
     func isHit(ray: Ray<Float>, rayT: Interval<Float>, rec: inout HitRecord) -> Bool {
         let oc: Vec3<Float> = center - ray.origin
@@ -48,6 +50,7 @@ struct Sphere: Hittable{
         rec.p = ray.at(t: rec.t)
         let outwardNormal: Vec3<Float> = (rec.p - center) / radius
         rec.setFaceNormal(ray: ray, outwardNormal: outwardNormal)
+        rec.material = material
 
         return true
     }
@@ -66,7 +69,7 @@ struct HittableList: Hittable{
 
 
     func isHit(ray: Ray<Float>, rayT: Interval<Float>, rec: inout HitRecord) -> Bool {
-        var tmpRecord: HitRecord = HitRecord(p: Vec3(), normal: Vec3(), t: 0, frontFace: false)
+        var tmpRecord: HitRecord = HitRecord(p: Vec3(), normal: Vec3(),material: Lambertian(albedo: Vec3()) ,t: 0, frontFace: false)
         var hitSomething: Bool = false
         var closest: Float = rayT.max
 

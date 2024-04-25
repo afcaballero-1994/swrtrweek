@@ -65,6 +65,48 @@ extension Ray{
     }
 }
 
+extension Vec3<Float>{
+    @inlinable
+    func nearZero() -> Bool{
+        let e: Float = 1e-8
+        return abs(x) < e && abs(y) < e && abs(z) < e
+    }
+    @inlinable
+    static func generateRandomVec3() -> Vec3<Float>{
+        return Vec3<Float>(x: Float.random(in: 0..<1), y: Float.random(in: 0..<1), z: Float.random(in: 0..<1))
+    }
+
+    @inlinable
+    static func generateRandomVec3(min: Float, max: Float) -> Vec3<Float>{
+        return Vec3<Float>(x: Float.random(in: min..<max), y: Float.random(in: min..<max), z: Float.random(in: min..<max))
+    }
+
+    @inlinable
+    static func randomInUnitSphere() -> Vec3<Float>{
+        while true{
+            let p: Vec3<Float> = Vec3<Float>.generateRandomVec3(min: -1, max: 1)
+            if p * p < 1{
+                return p
+            }
+        }
+    }
+
+    @inlinable
+    static func randomUnitVector() -> Vec3<Float>{
+        return Vec3<Float>.randomInUnitSphere().normalize()
+    }
+    @inlinable
+    static func randomOnHemisphere(normal: Vec3<Float>) -> Vec3<Float>{
+        let onUnitSphere: Vec3<Float> = Vec3<Float>.randomUnitVector()
+
+        if onUnitSphere * normal > 0{
+            return onUnitSphere
+        } else{
+            return -onUnitSphere
+        }
+    }
+}
+
 extension Vec3{
 
     init(){
@@ -76,6 +118,21 @@ extension Vec3{
     @inlinable
     static func lerp(a : Vec3, b : Vec3, t : Component) -> Vec3{
         return Vec3(x: a.x + t * (b.x - a.x) , y: a.y + t * (b.y - a.y), z: a.z + t * (b.z - a.z))
+    }
+
+    @inlinable
+    static func reflect(v: Vec3, n: Vec3) -> Vec3{
+        return v - 2 * (v * n) * n
+    }
+
+    @inlinable
+    static func refract(uv: Vec3, n: Vec3, etaiOverEtat: Component) -> Vec3{
+        let cosTheta: Component = min(-uv * n, 1)
+
+        let rOutPerp: Vec3 = etaiOverEtat * (uv + cosTheta * n)
+        let routPara: Vec3 = -sqrt(abs(1 - (rOutPerp * rOutPerp))) * n
+
+        return rOutPerp + routPara
     }
 
     @inlinable

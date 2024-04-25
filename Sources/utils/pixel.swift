@@ -1,3 +1,5 @@
+import Foundation
+
 struct Pixel{
     var r: UInt8
     var g: UInt8
@@ -22,4 +24,12 @@ func sdfBox(center: Vec3<Float>, l: Vec3<Float>) -> Float{
     let d: Vec3<Float> = Vec3.absv(a: center) - l
 
     return Vec3.maxv(a: d, b: 0).magnitude() + min(max(d.x, d.y), 0.0)
+}
+
+func linearToGamma(linearComponent: Float) -> Float{
+    if linearComponent > 0{
+        return sqrt(linearComponent)
+    }
+
+    return 0
 }
