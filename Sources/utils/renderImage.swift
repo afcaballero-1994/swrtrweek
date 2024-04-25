@@ -16,25 +16,46 @@ struct Camera{
     var samplesPerPixel: Float
     let pixelSamplesScale: Float
     let maxDepth: Float
+    let vFov: Float
+    var lookFrom: Vec3<Float>
+    var lookAt: Vec3<Float>
+    var up: Vec3<Float>
 
-    init(imageWidth: Int, imageHeight: Int, focalLenght: Float = 1.0, viewporthWidth: Float = 2 * 16/9, viewportHeight: Float = 2, samplesPerPixel: Float = 10, maxDepth: Float = 10){
+    init(imageWidth: Int, imageHeight: Int, focalLenght: Float = 1.0, samplesPerPixel: Float = 10, 
+            maxDepth: Float = 10, vFov: Float = 90, lookFrom: Vec3<Float> = Vec3<Float>(), 
+            lookAt: Vec3<Float> = Vec3<Float>(x: 0, y: 0, z: -1),
+            up: Vec3<Float> = Vec3<Float>(x: 0, y: 1, z: 0)
+        ){
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
-        self.focalLenght = focalLenght
-        self.viewporthWidth = viewporthWidth
-        self.viewportHeight = viewportHeight
+        
+        self.vFov = vFov
+        let theta: Float = degreesToRadians(degrees: vFov)
+        self.viewportHeight = 2 * tan(theta / 2) * focalLenght
+        self.viewporthWidth = viewportHeight * Float(imageWidth) / Float(imageHeight)
+
+        self.lookFrom = lookFrom
+        self.lookAt = lookAt
+        self.up = up
+
+        self.focalLenght = (lookFrom - lookAt).magnitude()
+
+        let w: Vec3 = (lookFrom - lookAt).normalize()
+        let u: Vec3 = Vec3<Float>.cross(lhs: up, rhs: w).normalize()
+        let v: Vec3 = Vec3<Float>.cross(lhs: w, rhs: u)
+        
         self.samplesPerPixel = samplesPerPixel
         self.pixelSamplesScale = 1 / samplesPerPixel
         self.maxDepth = maxDepth
 
-        self.center = Vec3<Float>(x: 0, y: 0, z: 0)
-        self.viewportU = Vec3<Float>(x: viewporthWidth, y: 0, z: 0)
-        self.viewportV = Vec3<Float>(x: 0, y: -viewportHeight, z: 0)
+        self.center = lookFrom
+        self.viewportU = viewporthWidth * u
+        self.viewportV = viewportHeight * -v
 
         self.pixelDeltaU = viewportU / Float(imageWidth)
         self.pixelDeltaV = viewportV / Float(imageHeight)
 
-        self.viewportUpperLeft = center - Vec3<Float>(x: 0, y: 0, z: focalLenght) - (viewportU / 2) - (viewportV / 2)
+        self.viewportUpperLeft = center - (focalLenght * w) - (viewportU / 2) - (viewportV / 2)
         self.pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV)
 
     }
