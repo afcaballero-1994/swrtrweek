@@ -116,6 +116,16 @@ extension Vec3{
     }
 
     @inlinable
+    static func generateRandomVec3InDisk() -> Vec3<Float>{
+        while true{
+            let p: Vec3<Float> = Vec3<Float>(x: Float.random(in: -0.999..<1), y: Float.random(in: -0.999..<1), z: 0)
+            if p.magnitude() < 1{
+                return p
+            }
+        }
+    }
+
+    @inlinable
     static func lerp(a : Vec3, b : Vec3, t : Component) -> Vec3{
         return Vec3(x: a.x + t * (b.x - a.x) , y: a.y + t * (b.y - a.y), z: a.z + t * (b.z - a.z))
     }

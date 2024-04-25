@@ -20,18 +20,25 @@ struct Camera{
     var lookFrom: Vec3<Float>
     var lookAt: Vec3<Float>
     var up: Vec3<Float>
+    let defocusAngle: Float
+    let focusDist: Float
+    private var defocusDiskU: Vec3<Float>
+    private var defocusDiskV: Vec3<Float>
 
     init(imageWidth: Int, imageHeight: Int, focalLenght: Float = 1.0, samplesPerPixel: Float = 10, 
             maxDepth: Float = 10, vFov: Float = 90, lookFrom: Vec3<Float> = Vec3<Float>(), 
             lookAt: Vec3<Float> = Vec3<Float>(x: 0, y: 0, z: -1),
-            up: Vec3<Float> = Vec3<Float>(x: 0, y: 1, z: 0)
+            up: Vec3<Float> = Vec3<Float>(x: 0, y: 1, z: 0), defocusAngle: Float = 10, focusDist: Float = 3.4
         ){
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
         
+        self.defocusAngle = defocusAngle
+        self.focusDist = focusDist
+
         self.vFov = vFov
         let theta: Float = degreesToRadians(degrees: vFov)
-        self.viewportHeight = 2 * tan(theta / 2) * focalLenght
+        self.viewportHeight = 2 * tan(theta / 2) * focusDist
         self.viewporthWidth = viewportHeight * Float(imageWidth) / Float(imageHeight)
 
         self.lookFrom = lookFrom
@@ -55,8 +62,12 @@ struct Camera{
         self.pixelDeltaU = viewportU / Float(imageWidth)
         self.pixelDeltaV = viewportV / Float(imageHeight)
 
-        self.viewportUpperLeft = center - (focalLenght * w) - (viewportU / 2) - (viewportV / 2)
+        self.viewportUpperLeft = center - (focusDist * w) - (viewportU / 2) - (viewportV / 2)
         self.pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV)
+
+        let defocusRadius: Float = focusDist * tan(degreesToRadians(degrees: defocusAngle / 2))
+        self.defocusDiskU = defocusRadius * u
+        self.defocusDiskV = defocusRadius * v
 
     }
 
@@ -115,7 +126,11 @@ struct Camera{
                           + ((i + offset.x) * pixelDeltaU)
                           + ((j + offset.y) * pixelDeltaV)
 
-        let rayOrigin = center
+        let rayOrigin = if defocusAngle <= 0{
+            center
+        } else{
+            defocusDiskSample()
+        }
         let rayDirection = pixelSample - rayOrigin
 
         return Ray<Float>(origin: rayOrigin, direction: rayDirection)
@@ -123,6 +138,12 @@ struct Camera{
 
     func sampleSquare() ->Vec3<Float>{
         return Vec3<Float>(x: Float.random(in: 0..<1) - 0.5, y: Float.random(in: 0..<1) - 0.5, z: 0)
+    }
+
+    private func defocusDiskSample() -> Vec3<Float>{
+        let p: Vec3<Float> = Vec3<Float>.generateRandomVec3InDisk()
+
+        return center + (p.x * defocusDiskU) + (p.y * defocusDiskV)
     }
 
 }
